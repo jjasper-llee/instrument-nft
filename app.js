@@ -1,416 +1,395 @@
-// --- Mock Data -------------------------------------------------------------
-
 const instruments = [
   {
-    id: "strad-1715",
-    name: "1715 &ldquo;Arco&rdquo; Stradivarius",
-    maker: "Antonio Stradivari",
-    year: 1715,
-    valuation: 8000000,
-    sharePrice: 1000,
-    totalShares: 8000,
-    location: "Custody: Secure vault, New York",
-    description:
-      "A golden-period Stradivarius with a brilliant upper register and deep, complex core. " +
-      "Offered here as a fractionalized demo instrument for the ArcoShares prototype.",
-    musicians: [
-      {
-        id: "mus-1",
-        name: "Violinist A",
-        bio: "Emerging soloist, recent competition laureate, NYC.",
-      },
-      {
-        id: "mus-2",
-        name: "Violinist B",
-        bio: "Principal in a major symphony orchestra, US.",
-      },
-      {
-        id: "mus-3",
-        name: "Violinist C",
-        bio: "String quartet member with extensive touring experience.",
-      },
+    id: 'lumicello',
+    name: 'LumiCello 1724',
+    type: 'Cello',
+    sharePrice: 125,
+    available: 1200,
+    filled: 78,
+    apr: '8.2%',
+    location: 'Boston Symphony',
+    tags: ['Classical', 'Residency', 'Boston'],
+  },
+  {
+    id: 'strad',
+    name: 'Stradivari "Phoenix"',
+    type: 'Violin',
+    sharePrice: 210,
+    available: 600,
+    filled: 64,
+    apr: '10.4%',
+    location: 'LA Phil',
+    tags: ['Touring', 'Film Score'],
+  },
+  {
+    id: 'carbonharp',
+    name: 'CarbonWave Harp',
+    type: 'Harp',
+    sharePrice: 65,
+    available: 2500,
+    filled: 52,
+    apr: '6.1%',
+    location: 'National Opera',
+    tags: ['Experimental', 'Residency'],
+  },
+  {
+    id: 'electric-bass',
+    name: 'Modular Electric Bass',
+    type: 'Bass',
+    sharePrice: 48,
+    available: 5000,
+    filled: 33,
+    apr: '5.4%',
+    location: 'Brooklyn Sessions',
+    tags: ['Studio', 'Streaming'],
+  },
+];
+
+const voteSessions = [
+  {
+    id: 'session-a',
+    instrument: 'LumiCello 1724',
+    date: 'Jul 12 · Carnegie Hall',
+    options: [
+      { name: 'Isabelle Tan', votes: 2124 },
+      { name: 'Mateo Rios', votes: 1860 },
     ],
   },
   {
-    id: "guarneri-1733",
-    name: "1733 &ldquo;Fantasie&rdquo; Guarneri del Gesù",
-    maker: "Guarneri del Gesù",
-    year: 1733,
-    valuation: 6000000,
-    sharePrice: 750,
-    totalShares: 8000,
-    location: "Custody: Zurich, Switzerland",
-    description:
-      "Dark, powerful tone with extraordinary projection. This Guarneri serves as a second " +
-      "demo asset to illustrate how multi-instrument portfolios might look.",
-    musicians: [
-      {
-        id: "mus-4",
-        name: "Violinist D",
-        bio: "Professor at a European conservatory, active solo career.",
-      },
-      {
-        id: "mus-5",
-        name: "Violinist E",
-        bio: "Young artist program member at a top festival.",
-      },
+    id: 'session-b',
+    instrument: 'Stradivari "Phoenix"',
+    date: 'Aug 03 · Walt Disney Concert Hall',
+    options: [
+      { name: 'Evergreen Quartet', votes: 1304 },
+      { name: 'LA Young Artists', votes: 980 },
+    ],
+  },
+  {
+    id: 'session-c',
+    instrument: 'CarbonWave Harp',
+    date: 'Aug 18 · Virtual Residency',
+    options: [
+      { name: 'Nova Sound Bath', votes: 654 },
+      { name: 'Anam Cara Collective', votes: 742 },
     ],
   },
 ];
 
-// --- State Management (Local Storage) -------------------------------------
+const state = {
+  balance: 0,
+  holdings: {},
+  connectedBank: false,
+  accountCreated: false,
+};
 
-const STORAGE_KEY = "arcoSharesDemoState";
+const repoApiUrl = 'https://api.github.com/repos/jjasper-llee/instrument-nft';
 
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return { holdings: {}, votes: {}, purchases: {} };
-    }
-    return JSON.parse(raw);
-  } catch (_) {
-    return { holdings: {}, votes: {}, purchases: {} };
-  }
-}
+const formatCurrency = (value) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
 
-function saveState(state) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
+function renderInstruments() {
+  const grid = document.getElementById('instrument-grid');
+  const select = document.getElementById('instrumentSelect');
+  if (!grid || !select) return;
 
-let state = loadState(); // { holdings: {instrumentId: shares}, votes: {instrumentId: musicianId} }
+  grid.innerHTML = '';
+  select.innerHTML = '<option value="">Choose instrument</option>';
 
-// --- Utility Functions -----------------------------------------------------
-
-function formatCurrency(value) {
-  return "$" + value.toLocaleString("en-US", { maximumFractionDigits: 0 });
-}
-
-function formatShares(value) {
-  return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
-}
-
-function scrollToSection(id) {
-  const el = document.getElementById(id);
-  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-// Expose scroll function to HTML
-window.scrollToSection = scrollToSection;
-
-// --- Rendering: Hero & Instruments ----------------------------------------
-
-function initHero() {
-  const heroInstrument = instruments[0];
-  document.getElementById("heroInstrumentName").innerHTML = `${heroInstrument.name}`;
-  document.getElementById(
-    "heroInstrumentMeta"
-  ).textContent = `${heroInstrument.maker} • ${heroInstrument.year}`;
-  document.getElementById(
-    "heroInstrumentPrice"
-  ).textContent = `Valuation (demo): ${formatCurrency(heroInstrument.valuation)}`;
-}
-
-function renderInstrumentList() {
-  const container = document.getElementById("instrumentList");
-  container.innerHTML = "";
-
-  instruments.forEach((inst) => {
-    const held = state.holdings[inst.id] || 0;
-
-    const card = document.createElement("article");
-    card.className = "card";
-
+  instruments.forEach((instrument) => {
+    const card = document.createElement('article');
+    card.className = 'instrument-card';
     card.innerHTML = `
-      <div>
-        <h3>${inst.name}</h3>
-        <p>${inst.maker} • ${inst.year}</p>
-        <p class="small">${inst.location}</p>
-        <div class="tag-row">
-          <span class="tag">Valuation: ${formatCurrency(inst.valuation)}</span>
-          <span class="tag">Share: ${formatCurrency(inst.sharePrice)}</span>
-          <span class="tag">Total shares: ${formatShares(inst.totalShares)}</span>
+      <header>
+        <div>
+          <p class="eyebrow">${instrument.type}</p>
+          <h4>${instrument.name}</h4>
         </div>
+        <button class="ghost" data-buy="${instrument.id}">Buy</button>
+      </header>
+      <p class="micro">${instrument.location}</p>
+      <div class="metric-grid">
+        <div><span class="micro">Share price</span><br>${formatCurrency(instrument.sharePrice)}</div>
+        <div><span class="micro">Target APR</span><br>${instrument.apr}</div>
+        <div><span class="micro">Shares open</span><br>${instrument.available}</div>
+        <div><span class="micro">Filled</span><br>${instrument.filled}%</div>
       </div>
-      <div class="card-footer">
-        <div class="small">
-          You hold: <strong>${formatShares(held)}</strong> shares
-        </div>
-        <button class="secondary-btn" data-id="${inst.id}">View &amp; invest</button>
-      </div>
-    `;
-
-    const btn = card.querySelector("button");
-    btn.addEventListener("click", () => openInstrumentDetail(inst.id));
-
-    container.appendChild(card);
-  });
-}
-
-// --- Instrument Detail & Interaction --------------------------------------
-
-let currentInstrumentId = null;
-
-function openInstrumentDetail(instrumentId) {
-  currentInstrumentId = instrumentId;
-  const inst = instruments.find((i) => i.id === instrumentId);
-  if (!inst) return;
-
-  const detailSection = document.getElementById("instrumentDetail");
-  detailSection.classList.remove("hidden");
-
-  document.getElementById("detailName").innerHTML = inst.name;
-  document.getElementById(
-    "detailMaker"
-  ).textContent = `${inst.maker} • ${inst.year}`;
-  document.getElementById("detailLocation").textContent = inst.location;
-  document.getElementById("detailDescription").textContent = inst.description;
-
-  const held = state.holdings[inst.id] || 0;
-  const sharesRemaining = Math.max(inst.totalShares - held, 0);
-
-  document.getElementById(
-    "detailValuation"
-  ).textContent = formatCurrency(inst.valuation);
-  document.getElementById(
-    "detailSharePrice"
-  ).textContent = formatCurrency(inst.sharePrice);
-  document.getElementById(
-    "detailTotalShares"
-  ).textContent = formatShares(inst.totalShares);
-  document.getElementById(
-    "detailSharesRemaining"
-  ).textContent = formatShares(sharesRemaining);
-
-  document.getElementById("buyFeedback").textContent = "";
-  document.getElementById("voteFeedback").textContent = "";
-
-  renderMusicianList(inst);
-  renderVoteSummary(inst);
-  renderPortfolio();
-  scrollToSection("instrumentDetail");
-}
-
-function closeInstrumentDetail() {
-  currentInstrumentId = null;
-  document.getElementById("instrumentDetail").classList.add("hidden");
-  scrollToSection("instruments");
-}
-
-window.closeInstrumentDetail = closeInstrumentDetail;
-
-// Buy shares (simulated)
-function handleBuyShares(event) {
-  event.preventDefault();
-  if (!currentInstrumentId) return;
-
-  const inst = instruments.find((i) => i.id === currentInstrumentId);
-  if (!inst) return;
-
-  const input = document.getElementById("shareAmount");
-  const raw = input.value;
-  const amount = parseInt(raw, 10);
-
-  if (isNaN(amount) || amount <= 0) {
-    document.getElementById("buyFeedback").textContent =
-      "Please enter a positive whole number.";
-    return;
-  }
-
-  const currentlyHeld = state.holdings[inst.id] || 0;
-  const sharesRemaining = Math.max(inst.totalShares - currentlyHeld, 0);
-
-  if (amount > sharesRemaining) {
-    document.getElementById("buyFeedback").textContent =
-      "Not enough demo shares remaining for this instrument.";
-    return;
-  }
-
-  const newHolding = currentlyHeld + amount;
-  state.holdings[inst.id] = newHolding;
-
-  saveState(state);
-  renderInstrumentList();
-  openInstrumentDetail(inst.id);
-  renderPortfolio();
-
-  document.getElementById(
-    "buyFeedback"
-  ).textContent = `Success! You now hold ${formatShares(newHolding)} demo shares.`;
-  input.value = "";
-}
-
-window.handleBuyShares = handleBuyShares;
-
-// --- Voting ---------------------------------------------------------------
-
-function renderMusicianList(inst) {
-  const container = document.getElementById("musicianList");
-  container.innerHTML = "";
-  const selectedMusicianId = state.votes[inst.id] || null;
-  const heldShares = state.holdings[inst.id] || 0;
-
-  if (heldShares === 0) {
-    container.innerHTML =
-      '<p class="small">Buy demo shares in this instrument to unlock voting power.</p>';
-    return;
-  }
-
-  inst.musicians.forEach((m) => {
-    const row = document.createElement("div");
-    row.className = "musician-card";
-
-    row.innerHTML = `
-      <div class="musician-info">
-        <div class="musician-name">${m.name}</div>
-        <div class="musician-meta">${m.bio}</div>
-      </div>
-      <button class="vote-btn" data-id="${m.id}">
-        ${selectedMusicianId === m.id ? "Selected" : "Vote"}
-      </button>
-    `;
-
-    const btn = row.querySelector("button");
-    if (selectedMusicianId === m.id) {
-      btn.classList.add("selected");
-    }
-    btn.addEventListener("click", () => castVote(inst.id, m.id));
-
-    container.appendChild(row);
-  });
-}
-
-function castVote(instrumentId, musicianId) {
-  const inst = instruments.find((i) => i.id === instrumentId);
-  if (!inst) return;
-
-  const heldShares = state.holdings[instrumentId] || 0;
-  if (heldShares === 0) {
-    document.getElementById("voteFeedback").textContent =
-      "You need demo shares in this instrument to vote.";
-    return;
-  }
-
-  state.votes[instrumentId] = musicianId;
-  saveState(state);
-
-  renderMusicianList(inst);
-  renderVoteSummary(inst);
-
-  const musician = inst.musicians.find((m) => m.id === musicianId);
-  document.getElementById(
-    "voteFeedback"
-  ).textContent = `You voted for ${musician.name} with ${formatShares(
-    heldShares
-  )} demo shares.`;
-}
-
-// For demo, we simulate aggregate votes using only this browser's state.
-function renderVoteSummary(inst) {
-  const container = document.getElementById("voteSummary");
-  container.innerHTML = "";
-
-  const instrumentId = inst.id;
-  const selected = state.votes[instrumentId];
-
-  if (!selected) {
-    container.innerHTML =
-      '<p class="small">No demo vote recorded yet for this instrument on this device.</p>';
-    return;
-  }
-
-  const heldShares = state.holdings[instrumentId] || 0;
-  const totals = {};
-  inst.musicians.forEach((m) => {
-    totals[m.id] = 0;
-  });
-  // In full system, this would aggregate many users.
-  totals[selected] = heldShares;
-
-  const max = Math.max(...Object.values(totals));
-
-  inst.musicians.forEach((m) => {
-    const votes = totals[m.id];
-    const pct = max === 0 ? 0 : Math.round((votes / max) * 100);
-
-    const row = document.createElement("div");
-    row.className = "vote-summary-row";
-
-    row.innerHTML = `
-      <span>${m.name}</span>
-      <span>${formatShares(votes)} shares</span>
-    `;
-    container.appendChild(row);
-
-    const bar = document.createElement("div");
-    bar.className = "vote-bar";
-
-    const fill = document.createElement("div");
-    fill.className = "vote-bar-fill";
-    fill.style.width = pct + "%";
-
-    bar.appendChild(fill);
-    container.appendChild(bar);
-  });
-}
-
-// --- Portfolio ------------------------------------------------------------
-
-function renderPortfolio() {
-  const container = document.getElementById("portfolioContent");
-  container.innerHTML = "";
-
-  const entries = Object.entries(state.holdings).filter(([_, shares]) => shares > 0);
-
-  if (entries.length === 0) {
-    container.innerHTML =
-      '<p class="small">You do not hold any demo shares yet. Buy shares in an instrument above to see your portfolio here.</p>';
-    return;
-  }
-
-  entries.forEach(([instrumentId, shares]) => {
-    const inst = instruments.find((i) => i.id === instrumentId);
-    if (!inst) return;
-
-    const value = shares * inst.sharePrice;
-    const vote = state.votes[instrumentId];
-    const musician = inst.musicians.find((m) => m.id === vote);
-
-    const card = document.createElement("article");
-    card.className = "card";
-
-    card.innerHTML = `
-      <div>
-        <h3>${inst.name}</h3>
-        <p>${inst.maker} • ${inst.year}</p>
-        <p class="small">Location: ${inst.location}</p>
-      </div>
+      <div class="progress"><span style="width:${instrument.filled}%"></span></div>
       <div class="tag-row">
-        <span class="tag">Shares held: ${formatShares(shares)}</span>
-        <span class="tag">Demo value: ${formatCurrency(value)}</span>
-        ${
-          musician
-            ? `<span class="tag">Your vote: ${musician.name}</span>`
-            : `<span class="tag">No vote cast yet</span>`
-        }
-      </div>
-      <div class="card-footer">
-        <span class="small">Last updated: now</span>
-        <button class="secondary-btn">View instrument</button>
+        ${instrument.tags.map((tag) => `<span class="tag">${tag}</span>`).join('')}
       </div>
     `;
+    grid.appendChild(card);
 
-    const btn = card.querySelector("button");
-    btn.addEventListener("click", () => openInstrumentDetail(inst.id));
+    const option = document.createElement('option');
+    option.value = instrument.id;
+    option.textContent = `${instrument.name} (${instrument.type})`;
+    select.appendChild(option);
+  });
 
-    container.appendChild(card);
+  grid.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-buy]');
+    if (!button) return;
+    const id = button.dataset.buy;
+    select.value = id;
+    document.getElementById('buyForm')?.scrollIntoView({ behavior: 'smooth' });
   });
 }
 
-// --- Initialize -----------------------------------------------------------
+function renderHeroMetrics() {
+  const container = document.getElementById('heroMetrics');
+  if (!container) return;
 
-document.addEventListener("DOMContentLoaded", () => {
-  initHero();
-  renderInstrumentList();
-  renderPortfolio();
-});
+  const metrics = [
+    { label: 'Holdings', value: Object.keys(state.holdings).length },
+    {
+      label: 'Est. Yield',
+      value:
+        state.balance > 0
+          ? `${(5 + Math.random() * 4).toFixed(1)}%`
+          : '—',
+    },
+    { label: 'Voting power', value: `${Object.values(state.holdings).reduce((a, b) => a + b, 0)} votes` },
+  ];
+
+  container.innerHTML = metrics
+    .map(
+      (metric) => `
+        <div class="metric">
+          <span>${metric.label}</span>
+          <strong>${metric.value}</strong>
+        </div>
+      `
+    )
+    .join('');
+}
+
+function updateBalances() {
+  const balanceDisplay = document.getElementById('balanceDisplay');
+  const buyingPower = document.getElementById('buyingPower');
+  if (balanceDisplay) balanceDisplay.textContent = formatCurrency(state.balance);
+  if (buyingPower) buyingPower.textContent = formatCurrency(state.balance);
+  renderHeroMetrics();
+}
+
+function handleScrollButtons() {
+  document.querySelectorAll('[data-scroll]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const target = document.querySelector(btn.dataset.scroll);
+      target?.scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+}
+
+function handleSignup() {
+  const form = document.getElementById('signupForm');
+  const status = document.getElementById('signupStatus');
+  if (!form || !status) return;
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    state.accountCreated = true;
+    status.textContent = 'Account created. Check email to verify identity.';
+    status.style.color = '#6df9c6';
+    form.reset();
+  });
+}
+
+function handleBankLink() {
+  const form = document.getElementById('bankForm');
+  const status = document.getElementById('bankStatus');
+  if (!form || !status) return;
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (!state.accountCreated) {
+      status.textContent = 'Create an account before linking a bank.';
+      status.style.color = '#ff8b6b';
+      return;
+    }
+
+    state.connectedBank = true;
+    status.textContent = 'Bank connected. Ready to fund instantly.';
+    status.style.color = '#6df9c6';
+    form.reset();
+  });
+}
+
+function handleAddMoney() {
+  const form = document.getElementById('addMoneyForm');
+  if (!form) return;
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const formData = new FormData(form);
+    const amount = Number(formData.get('amount')) || 0;
+
+    if (!state.connectedBank) {
+      alert('Connect a bank first.');
+      return;
+    }
+
+    state.balance += amount;
+    updateBalances();
+    form.reset();
+  });
+}
+
+function handleBuyShares() {
+  const form = document.getElementById('buyForm');
+  const status = document.getElementById('buyStatus');
+  if (!form || !status) return;
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const formData = new FormData(form);
+    const instrumentId = formData.get('instrument');
+    const shares = Number(formData.get('shares'));
+    const instrument = instruments.find((item) => item.id === instrumentId);
+
+    if (!instrument) {
+      status.textContent = 'Choose an instrument to continue.';
+      status.style.color = '#ff8b6b';
+      return;
+    }
+
+    const cost = shares * instrument.sharePrice;
+
+    if (cost > state.balance) {
+      status.textContent = 'Not enough buying power. Fund your account first.';
+      status.style.color = '#ff8b6b';
+      return;
+    }
+
+    state.balance -= cost;
+    state.holdings[instrumentId] = (state.holdings[instrumentId] || 0) + shares;
+    status.textContent = `Purchased ${shares} shares of ${instrument.name}.`;
+    status.style.color = '#6df9c6';
+    updateBalances();
+    form.reset();
+  });
+}
+
+function handleVoteCards() {
+  const grid = document.getElementById('voteGrid');
+  if (!grid) return;
+
+  grid.innerHTML = '';
+
+  voteSessions.forEach((session) => {
+    const card = document.createElement('article');
+    card.className = 'vote-card';
+
+    card.innerHTML = `
+      <header>
+        <div>
+          <p class="eyebrow">${session.instrument}</p>
+          <h4>${session.date}</h4>
+        </div>
+        <span class="micro">1 share = 1 vote</span>
+      </header>
+      <div class="vote-options">
+        ${session.options
+          .map(
+            (option, index) => `
+              <button data-session="${session.id}" data-option="${index}">
+                <span>${option.name}</span>
+                <strong>${option.votes.toLocaleString()}</strong>
+              </button>
+            `
+          )
+          .join('')}
+      </div>
+    `;
+
+    grid.appendChild(card);
+  });
+
+  grid.addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-session]');
+    if (!button) return;
+    const sessionId = button.dataset.session;
+    const optionIndex = Number(button.dataset.option);
+
+    const session = voteSessions.find((item) => item.id === sessionId);
+    if (!session) return;
+
+    const votingPower = Object.values(state.holdings).reduce((a, b) => a + b, 0);
+    const increment = Math.max(1, votingPower || 10);
+    session.options[optionIndex].votes += increment;
+    button.querySelector('strong').textContent = session.options[optionIndex].votes.toLocaleString();
+    button.classList.add('solid');
+  });
+}
+
+function initFooterYear() {
+  const year = document.getElementById('year');
+  if (year) year.textContent = new Date().getFullYear();
+}
+
+async function hydrateRepoMeta() {
+  const stars = document.getElementById('repoStars');
+  const forks = document.getElementById('repoForks');
+  const issues = document.getElementById('repoIssues');
+  if (!stars || !forks || !issues) return;
+
+  try {
+    const response = await fetch(repoApiUrl);
+    if (!response.ok) throw new Error('Request failed');
+    const data = await response.json();
+
+    stars.textContent = (data.stargazers_count ?? 0).toLocaleString();
+    forks.textContent = (data.forks_count ?? 0).toLocaleString();
+    issues.textContent = (data.open_issues_count ?? 0).toLocaleString();
+  } catch (error) {
+    [stars, forks, issues].forEach((node) => {
+      node.textContent = '—';
+    });
+  }
+}
+
+function handleRepoCopy() {
+  const button = document.getElementById('copyRepo');
+  if (!button) return;
+  const cloneUrl = button.dataset.repoUrl;
+
+  button.addEventListener('click', async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(cloneUrl);
+      } else {
+        const input = document.createElement('input');
+        input.value = cloneUrl;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+      }
+      button.textContent = 'Copied!';
+      button.classList.add('solid');
+    } catch (error) {
+      button.textContent = 'Copy manually';
+    }
+
+    setTimeout(() => {
+      button.textContent = 'Copy clone URL';
+      button.classList.remove('solid');
+    }, 1800);
+  });
+}
+
+function init() {
+  renderInstruments();
+  renderHeroMetrics();
+  handleScrollButtons();
+  handleSignup();
+  handleBankLink();
+  handleAddMoney();
+  handleBuyShares();
+  handleVoteCards();
+  updateBalances();
+  initFooterYear();
+  hydrateRepoMeta();
+  handleRepoCopy();
+}
+
+document.addEventListener('DOMContentLoaded', init);
