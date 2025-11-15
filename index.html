@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ArcoShares – Fractional Ownership of Fine Instruments</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="logo">ArcoShares</div>
+    <nav class="nav">
+      <a href="#instruments">Instruments</a>
+      <a href="#portfolio">Your Portfolio</a>
+      <a href="#how-it-works">How It Works</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-text">
+        <h1>Own a Share. Shape the Sound.</h1>
+        <p>
+          Fractional ownership of world-class instruments with community voting
+          on which musicians get to perform on them.
+        </p>
+        <button class="primary-btn" onclick="scrollToSection('instruments')">
+          Explore Instruments
+        </button>
+      </div>
+      <div class="hero-card">
+        <h2>Featured Instrument</h2>
+        <p class="hero-instrument-name" id="heroInstrumentName"></p>
+        <p id="heroInstrumentMeta"></p>
+        <p id="heroInstrumentPrice"></p>
+      </div>
+    </section>
+
+    <!-- Instruments -->
+    <section id="instruments" class="section">
+      <div class="section-header">
+        <h2>Available Instruments</h2>
+        <p>Browse instruments and buy simulated shares to see how the platform works.</p>
+      </div>
+      <div id="instrumentList" class="card-grid"></div>
+    </section>
+
+    <!-- Instrument detail / interaction panel -->
+    <section id="instrumentDetail" class="section detail-section hidden">
+      <div class="detail-layout">
+        <div class="detail-main">
+          <button class="back-btn" onclick="closeInstrumentDetail()">← Back to instruments</button>
+          <h2 id="detailName"></h2>
+          <p id="detailMaker"></p>
+          <p id="detailLocation"></p>
+          <p id="detailDescription"></p>
+
+          <div class="detail-stats">
+            <div>
+              <span class="label">Valuation</span>
+              <span id="detailValuation" class="stat"></span>
+            </div>
+            <div>
+              <span class="label">Share Price</span>
+              <span id="detailSharePrice" class="stat"></span>
+            </div>
+            <div>
+              <span class="label">Total Shares</span>
+              <span id="detailTotalShares" class="stat"></span>
+            </div>
+            <div>
+              <span class="label">Shares Remaining</span>
+              <span id="detailSharesRemaining" class="stat"></span>
+            </div>
+          </div>
+
+          <div class="interaction-card">
+            <h3>Buy Shares (Simulation)</h3>
+            <p class="small">
+              This is a demo – no real money is used. Your “holdings” are saved in your browser only.
+            </p>
+            <form onsubmit="handleBuyShares(event)">
+              <label for="shareAmount">Number of shares</label>
+              <input
+                id="shareAmount"
+                name="shareAmount"
+                type="number"
+                min="1"
+                step="1"
+                required
+              />
+              <button type="submit" class="primary-btn full-width">
+                Buy Shares
+              </button>
+              <p class="small" id="buyFeedback"></p>
+            </form>
+          </div>
+        </div>
+
+        <aside class="detail-sidebar">
+          <div class="interaction-card">
+            <h3>Vote: Who Should Play It?</h3>
+            <p class="small">
+              Your vote is weighted by your simulated share holdings.
+            </p>
+            <div id="musicianList"></div>
+            <p class="small" id="voteFeedback"></p>
+          </div>
+
+          <div class="interaction-card">
+            <h3>Current Voting Snapshot</h3>
+            <div id="voteSummary"></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Portfolio -->
+    <section id="portfolio" class="section">
+      <div class="section-header">
+        <h2>Your Portfolio (Demo)</h2>
+        <p>
+          These holdings are stored locally in your browser. Refresh-safe, but only on this device.
+        </p>
+      </div>
+      <div id="portfolioContent" class="card-grid"></div>
+    </section>
+
+    <!-- How it works -->
+    <section id="how-it-works" class="section">
+      <div class="section-header">
+        <h2>How This Would Work in Reality</h2>
+      </div>
+      <div class="how-grid">
+        <div class="how-card">
+          <h3>1. Instrument SPV</h3>
+          <p>
+            Each instrument sits in a special-purpose company that legally owns it. Investors own
+            shares of that company, not the violin directly.
+          </p>
+        </div>
+        <div class="how-card">
+          <h3>2. Fractional Shares</h3>
+          <p>
+            The SPV is split into a fixed number of shares. Investors buy fractions, similar to
+            how you might own fractional shares of a stock.
+          </p>
+        </div>
+        <div class="how-card">
+          <h3>3. Voting on Musicians</h3>
+          <p>
+            Shareholders vote on which musician receives a performance loan, with votes weighted by
+            number of shares.
+          </p>
+        </div>
+        <div class="how-card">
+          <h3>4. Income & Impact</h3>
+          <p>
+            In a full implementation, performance fees or appreciation could flow back to
+            shareholders while instruments stay in the hands of artists.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>ArcoShares – prototype built by Jasper for demo purposes only.</p>
+  </footer>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
